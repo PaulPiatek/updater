@@ -1,0 +1,27 @@
+{
+  "ignore": [
+    "npm:@types/*",
+    "winget:Ubisoft.Connect"
+  ],
+  "pin": [
+    "npm:npm-check-updates",
+    "windows-update:*"
+  ],
+  "scripts": [
+    {
+      "name": "update-all",
+      "path": "C:\\Users\\me\\scripts\\update-all.cmd"
+    },
+    {
+      "name": "drivers",
+      "path": "C:\\Users\\me\\tools\\drivers\\update.ps1",
+      "args": ["-Silent"],
+      "cwd": "C:\\Users\\me\\tools\\drivers"
+    },
+    {
+      "name": "ImageAI",
+      "path": "G:\\ImageAI\\update.py",
+      "interpreter": "G:\\ImageAI\\ComfyUI\\venv\\Scripts\\python.exe"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "updater",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "updater": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "icon": "bun run scripts/make-icon.ts",
+    "build:exe": "bun build --compile --outfile=dist/updater.exe --windows-icon=assets/icon.ico --windows-title=updater --windows-publisher=Paul --windows-version=0.1.0.0 --windows-description=\"Interactive updater for npm, winget, Windows Update and custom scripts\" ./src/index.ts",
+    "install": "bun run scripts/install.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}
