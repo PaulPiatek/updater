@@ -19,7 +19,28 @@ const message = (err: unknown): string =>
 const versionLabel = (item: UpgradeItem): string =>
   item.hint ?? `${item.current} → ${item.latest}`;
 
+/**
+ * Waits for the user to press a key before the window can close.
+ *
+ * Only runs when there is an interactive terminal — never in `--json` mode, and
+ * never when stdin/stdout is redirected — so scripted use can't hang waiting for
+ * a keypress that will never come.
+ */
+async function waitForExit(): Promise<void> {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return;
+  const { text, isCancel } = await import("@clack/prompts");
+  // A single-character prompt: any key (or Enter) resolves it.
+  if (isCancel(await text({ message: "Press Enter to exit" }))) return;
+}
+
 export async function run(opts: RunOptions): Promise<number> {
+  const code = await runInternal(opts);
+  // Interactive runs stay open until acknowledged; scripted runs don't pause.
+  if (!opts.json) await waitForExit();
+  return code;
+}
+
+async function runInternal(opts: RunOptions): Promise<number> {
   if (!opts.json) intro("updater");
 
   // ---------------------------------------------------------------------------
