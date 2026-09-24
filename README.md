@@ -1,12 +1,34 @@
 # updater
 
 An interactive CLI updater. It upgrades **globally installed npm packages**,
-**Windows Package Manager (winget)** packages and **Windows Update** software
-updates; the selection UI and runner are source-agnostic so more package
-managers can be added later (brew, pip, …).
+**Windows Package Manager (winget)** packages, **Windows Update** software
+updates, and runs your own **custom update scripts**.
+
+Everything is driven by one terminal flow: pick which *sources* to scan, pick
+which *upgrades* to apply, done. The selection UI and runner are source-agnostic,
+so more package managers can be added later (brew, pip, …).
 
 Built with [Bun](https://bun.sh) + TypeScript and
 [`@clack/prompts`](https://github.com/bombshell-dev/clack) for the terminal UI.
+
+## What it does
+
+- **Lists** everything that has an update available, across the sources you
+  choose.
+- Lets you **pick** individually what to upgrade (all checked by default; every
+  row shows `current → latest`).
+- **Applies** the selection, reporting success/failure per item.
+- Understands **ignore** and **pin** rules so you can hide or lock packages.
+- Can **run your own scripts** as a source.
+- Also works **non-interactively** (`--json`, `--yes`) for scripting.
+
+## Requirements
+
+- [Bun](https://bun.sh) 1.4+ (for development / running from source).
+- The tools for whichever sources you use: `npm`, `winget`, PowerShell (all
+  present on a standard Windows box).
+- The standalone `.exe` needs none of these to *run* — only the tools used by
+  the sources themselves.
 
 ## Usage
 
@@ -22,7 +44,19 @@ bun run start --help
 ```
 
 `npm run start` / `bun run start` are equivalent; you can also call
-`bun src/index.ts` directly.
+`bun src/index.ts` directly. When installed as an exe, `updater [options]` works
+the same way (see [Standalone executable](#standalone-executable)).
+
+### Flags
+
+| Flag              | Alias | Meaning                                                |
+| ----------------- | ----- | ------------------------------------------------------ |
+| `--dry-run`       | `-n`  | List and select as usual, but print commands, run none |
+| `--yes`           | `-y`  | Skip both pickers and upgrade everything               |
+| `--json`          |       | Print the upgradable items as JSON and exit (no TUI)   |
+| `--source <id>`   |       | Only use this source (repeatable)                      |
+| `--help`          | `-h`  | Show help                                              |
+| `--version`       | `-v`  | Show the version                                       |
 
 ### Picker keybindings
 
@@ -50,12 +84,12 @@ Sources that are not installed are greyed out and cannot be checked.
 
 ## Configuration
 
-Optional config files control which packages are hidden or locked:
+Optional config files control which items are hidden or locked:
 
-| Path                            | Scope                          |
-| ------------------------------- | ------------------------------ |
-| `%APPDATA%/updater/config.json` | user-wide default              |
-| `./updater.config.json`         | project folder, overrides user |
+| Path                                  | Scope                          |
+| ------------------------------------- | ------------------------------ |
+| `%USERPROFILE%\.config\updater\config.json` | user-wide default (auto-created) |
+| `./updater.config.json`               | project folder, overrides user |
 
 ### Where the config lives
 
@@ -67,9 +101,11 @@ The user config is created automatically on first run at:
 ```
 
 If a `./updater.config.json` exists in the current folder it overrides the user
-config **per key** (`ignore` and `pin` are replaced wholesale, not merged).
+config **per key** (`ignore`, `pin` and `scripts` are replaced wholesale, not
+merged).
 
-Each file may set either or both keys. See `updater.config.example.json`.
+Each file may set any of the keys `ignore`, `pin` and `scripts` — see
+`updater.config.example.json`.
 
 ```json
 {
@@ -78,8 +114,8 @@ Each file may set either or both keys. See `updater.config.example.json`.
 }
 ```
 
-- **ignore** — package disappears from the list entirely (you won't see it).
-- **pin** — package is shown but **locked**: it is greyed out with a `pinned`
+- **ignore** — the item disappears from the list entirely (you won't see it).
+- **pin** — the item is shown but **locked**: it is greyed out with a `pinned`
   hint and can never be selected or upgraded.
 
 If a rule matches both lists, **ignore wins**.
@@ -164,31 +200,69 @@ full id (e.g. `npm:npm-check-updates`) and its source id.
 
 ```sh
 bun install
-bun test          # unit tests
-bun run typecheck # tsc --noEmit
 ```
 
-## Standalone executable
+### npm / bun scripts
 
-Build a self-contained Windows exe (no Bun/Node needed to run it):
+All targets in `package.json` and what they do:
+
+| Target              | Command                                                        | Purpose                                                                 |
+| ------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `start`             | `bun run src/index.ts`                                         | Run the updater from source (the normal dev entry point).               |
+| `test`              | `bun test`                                                     | Run the unit test suite (`tests/`, [bun:test](https://bun.sh/docs/cli/test)). |
+| `typecheck`         | `tsc --noEmit`                                                 | Strict type check; no output files.                                     |
+| `icon`              | `bun run scripts/make-icon.ts`                                 | Regenerate `assets/icon.ico` (multi-size ICO, drawn in code — no image libs). |
+| `build:exe`         | `bun build --compile … ./src/index.ts`                         | Build the standalone `dist/updater.exe` with icon + Windows metadata.   |
+| `install`           | `bun run scripts/install.ts`                                   | Copy `dist/updater.exe` to `%USERPROFILE%\.local\bin` (asks first; `--yes` skips). |
+
+Run any of them with `bun run <target>`, e.g. `bun run test` or
+`bun run build:exe`.
+
+### Typical workflows
+
+**Developing:**
+```sh
+bun run start        # run it
+bun run test         # while iterating
+bun run typecheck    # before committing
+```
+
+**Shipping the executable:**
+```sh
+bun run icon         # only if you changed the icon script
+bun run build:exe    # -> dist/updater.exe
+bun run install      # -> %USERPROFILE%\.local\bin\updater.exe (asks to confirm)
+```
+
+`install` writes to a temp file and then renames, so re-installing over a
+currently-running `updater.exe` is safe, and it warns if the target directory is
+not on your `PATH`. With no interactive terminal it refuses to prompt — use
+`bun run install --yes`.
+
+### Standalone executable
+
+`bun run build:exe` produces a self-contained Windows exe (no Bun/Node needed to
+run it):
 
 ```sh
 bun run build:exe   # -> dist/updater.exe  (~82 MB)
 ```
 
-This uses `bun build --compile` with the app metadata and icon:
+It uses `bun build --compile` plus:
 
-- `assets/icon.ico` — regenerate with `bun run icon` (a self-contained script,
-  no image libraries needed).
-- `--windows-title/--windows-publisher/--windows-version/--windows-description`
-  set the exe's properties.
+- `--windows-icon=assets/icon.ico` — the app icon (see `bun run icon`).
+- `--windows-title`, `--windows-publisher`, `--windows-version`,
+  `--windows-description` — Windows file properties shown in Explorer.
 
-The exe is fully featured: all sources, the interactive pickers and the
-elevated Windows Update batch work exactly as under `bun run start`. Note the
-size (~82 MB) — that's the embedded Bun runtime, the price of zero runtime
-dependencies. SmartScreen may warn on first run because the exe is unsigned.
+The exe is fully featured: all sources, the interactive pickers and the elevated
+Windows Update batch work exactly as under `bun run start`. Notes:
 
-Development still uses `bun run start`; the exe is just a build artifact.
+- **Size (~82 MB)** — that's the embedded Bun runtime, the price of zero runtime
+  dependencies.
+- **SmartScreen** may warn on first run because the exe is unsigned; choose
+  "More info → Run anyway".
+- Development still uses `bun run start`; the exe is just a build artifact
+  (`dist/` is git-ignored).
 
 ## Architecture
 
@@ -197,7 +271,7 @@ src/
   index.ts          CLI entry, flag parsing, help/version
   runner.ts         discover sources -> gather -> config -> select -> apply
   proc.ts           Bun.spawn helper for running commands
-  config.ts         ignore/pin rules from user + project config files
+  config.ts         ignore/pin/scripts from user + project config files
   types.ts          UpgradeItem / Source / UpgradeResult
   ui/select.ts      generic checkbox picker (source-agnostic)
   sources/
@@ -206,6 +280,11 @@ src/
     winget.ts       Windows Package Manager packages
     windows-update.ts  Windows Update software updates
     custom.ts       user-defined executables from config
+scripts/
+  make-icon.ts      generates assets/icon.ico
+  install.ts        installs the built exe into ~/.local/bin
+assets/
+  icon.ico          app icon (generated)
 tests/              bun:test unit tests
 ```
 
@@ -238,7 +317,13 @@ export const mySource: Source = {
 ```
 
 The picker, runner, `--dry-run`, `--json` and `--yes` all work automatically
-once the source is registered.
+once the source is registered. Optional extras on the interface:
+
+- `runMode?: "spinner" | "stream"` — use `stream` if the source prints to the
+  terminal itself (the runner then pauses its spinner so the two don't clash).
+  The `custom` source uses this.
+- `upgradeBatch(items, opts)` — implement when the work is better done in one
+  shot (one process, one UAC prompt), as `windows-update` does.
 
 ### Source notes
 
@@ -261,7 +346,5 @@ once the source is registered.
   summary warns about. Note: the reported download size comes from WUA and can
   overstate the real download.
 - **New sources** can implement the optional `upgradeBatch(items, opts)` method
-  when their work is better done in one shot (one process, one prompt, etc.).
-
-For a longer-lived follow-up, sources are the natural place to plug in a config
-file (which sources are enabled, pinned packages, etc.).
+  when their work is better done in one shot (one process, one prompt, etc.),
+  and set `runMode: "stream"` when they write to the terminal directly.
