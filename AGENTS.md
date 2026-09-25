@@ -92,6 +92,16 @@ picker render was verified byte-for-byte against stock clack.
 - **Spawning elevated** for Windows Update: write a `.ps1` to temp, run it via
   `Start-Process -Verb RunAs -Wait`, and read results back from a temp JSON file.
   One elevated process = one UAC prompt for the whole batch (`upgradeBatch`).
+- **Console input mode is shared and fragile.** clack leaves the console in raw
+  input mode, and an elevated child (UAC) / interactive child can leave it
+  changed so later prompts — including a custom script's own `pause`/`input()` —
+  can't read keys. `Bun`'s `process.stdin.setRawMode(false)` does **not** restore
+  the original mode (it lands on `0x7`, losing flags). The fix is
+  `src/console-mode.ts`: snapshot the real `GetConsoleMode` value before an
+  `inherit` spawn and write it back exactly with `SetConsoleMode` afterwards
+  (via `bun:ffi`). `proc.run()` wraps every `inherit` spawn in
+  `withConsoleModeRestored`. Verified: `0x1f7` → `0x1f7` even when the child
+  leaves it at raw `0x208`; without the fix it sticks at `0x208`/`0x1f6`.
 
 ### 5. Parsing tool output
 

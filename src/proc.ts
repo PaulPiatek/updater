@@ -1,3 +1,5 @@
+import { withConsoleModeRestored } from "./console-mode";
+
 export interface RunResult {
   code: number;
   stdout: string;
@@ -15,25 +17,6 @@ export interface RunOptions {
 }
 
 /**
- * Restores cooked console input mode on Windows.
- *
- * clack's spinner enables raw mode and never turns it off on Windows
- * (clack issues #176/#408). A child that takes over the console — notably an
- * elevated process spawned via UAC (Windows Update, or a winget package that
- * prompts) — can leave the console unable to deliver keys to later prompts.
- * Resetting after such a child returns fixes that. Safe to call when there is
- * no TTY.
- */
-export function restoreConsoleMode(): void {
-  if (process.platform !== "win32") return;
-  try {
-    if (process.stdin.isTTY) process.stdin.setRawMode(false);
-  } catch {
-    // setRawMode can throw if the stream was already torn down; ignore.
-  }
-}
-
-/**
  * Runs a command. `Bun.spawn` is used directly (rather than `Bun.$`) so
  * arguments are passed verbatim without shell quoting issues.
  *
@@ -45,15 +28,19 @@ export async function run(
   options: RunOptions = {},
 ): Promise<RunResult> {
   if (options.inherit) {
-    const proc = Bun.spawn(cmd, {
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
-      cwd: options.cwd,
+    // A child that takes over the console (especially an elevated one via UAC)
+    // can leave the shared console input mode in a broken state. Snapshot it
+    // before and restore it exactly afterwards — see console-mode.ts.
+    return withConsoleModeRestored(async () => {
+      const proc = Bun.spawn(cmd, {
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+        cwd: options.cwd,
+      });
+      const code = await proc.exited;
+      return { code, stdout: "", stderr: "" };
     });
-    const code = await proc.exited;
-    restoreConsoleMode();
-    return { code, stdout: "", stderr: "" };
   }
 
   const proc = Bun.spawn(cmd, {
