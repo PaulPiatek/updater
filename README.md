@@ -182,6 +182,10 @@ Notes:
 - Scripts can be ignored or pinned like anything else: `custom:<name>`,
   or `custom:*` for all of them.
 
+See [`examples/`](examples/) for a ready-made script
+([`store-update.ps1`](examples/store-update.ps1) — triggers Microsoft Store app
+updates) and how to wire it up.
+
 ### Rule syntax
 
 A rule is `source:pattern`, or just `pattern`:
