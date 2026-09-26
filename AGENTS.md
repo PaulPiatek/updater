@@ -27,6 +27,30 @@ bun run install      # copy exe to ~/.local/bin (asks; --yes to skip)
 Always run **`bun test` and `bun run typecheck`** before committing. Both are
 fast.
 
+### Building and installing
+
+To ship a fresh binary:
+
+```sh
+bun run build:exe && bun run install
+```
+
+`install` copies `dist/updater.exe` (~82 MB) to
+`%USERPROFILE%\.local\bin\updater.exe` (already on PATH), asking for
+confirmation; `--yes` skips the prompt. It stages to a `.new` file and renames,
+so re-installing over a running `updater.exe` is safe.
+
+Two gotchas learned the hard way:
+
+- **If the copy is interrupted** (e.g. an agent harness kills the process
+  mid-copy), a stale `updater.exe` is left in place and `bun run install`
+  reports nothing. Verify by timestamp/size: the installed file should match
+  the fresh `dist/updater.exe`. A direct `Copy-Item` to a `.new` file followed
+  by `Move-Item` is the equivalent recovery.
+- **Always rebuild before installing** when you want to test a fix — the
+  installed exe is a snapshot, not a link to the source. `bun run start` reads
+  the source directly, so it picks up changes without a rebuild.
+
 ## Hard-won lessons
 
 ### 1. Prefer stock clack over custom TUI code
