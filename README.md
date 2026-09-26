@@ -11,6 +11,10 @@ so more package managers can be added later (brew, pip, …).
 Built with [Bun](https://bun.sh) + TypeScript and
 [`@clack/prompts`](https://github.com/bombshell-dev/clack) for the terminal UI.
 
+> Prefer a richer, pane-based interface? See the sibling project
+> [`updater-tui`](https://github.com/PaulPiatek/updater-tui) — same sources,
+> same config, [OpenTUI](https://opentui.com) front-end.
+
 ## What it does
 
 - **Lists** everything that has an update available, across the sources you
