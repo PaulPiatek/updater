@@ -186,9 +186,12 @@ Notes:
 - Scripts can be ignored or pinned like anything else: `custom:<name>`,
   or `custom:*` for all of them.
 
-See [`examples/`](examples/) for a ready-made script
-([`store-update.ps1`](examples/store-update.ps1) — triggers Microsoft Store app
-updates) and how to wire it up.
+See [`examples/`](examples/) for ready-made scripts and how to wire them up:
+
+- [`store-update.ps1`](examples/store-update.ps1) — triggers Microsoft Store app
+  updates.
+- [`msys-update.ps1`](examples/msys-update.ps1) — updates an MSYS2 install
+  (`pacman -Syu`, looping until done).
 
 ### Rule syntax
 
