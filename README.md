@@ -1,5 +1,16 @@
 # updater
 
+> [!WARNING]
+> **Retired — no longer maintained.**
+>
+> This project has been superseded by **[updater-tui](https://github.com/PaulPiatek/updater-tui)**,
+> which does the same job with a richer, pane-based terminal UI (OpenTUI) and
+> shares the same config. Use that instead.
+>
+> This repository is kept for reference only: no bug fixes, no new sources, no
+> dependency updates. Its git history and [`AGENTS.md`](AGENTS.md) are still
+> useful as documentation of the decisions and pitfalls behind the successor.
+
 An interactive CLI updater. It upgrades **globally installed npm packages**,
 **Windows Package Manager (winget)** packages, **Windows Update** software
 updates, and runs your own **custom update scripts**.
@@ -11,9 +22,8 @@ so more package managers can be added later (brew, pip, …).
 Built with [Bun](https://bun.sh) + TypeScript and
 [`@clack/prompts`](https://github.com/bombshell-dev/clack) for the terminal UI.
 
-> Prefer a richer, pane-based interface? See the sibling project
-> [`updater-tui`](https://github.com/PaulPiatek/updater-tui) — same sources,
-> same config, [OpenTUI](https://opentui.com) front-end.
+> **Successor:** [`updater-tui`](https://github.com/PaulPiatek/updater-tui) —
+> same sources, same config, [OpenTUI](https://opentui.com) front-end.
 
 ## What it does
 
